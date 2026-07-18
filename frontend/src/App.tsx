@@ -112,10 +112,10 @@ function Ledger({ me }: { me: `0x${string}` }) {
         </button>
       </div>
 
-      {debts.length > 6 && (
+      {visible.length > 6 && (
         <input
           className="search mono"
-          placeholder="Search by address or description…"
+          placeholder={`Search ${view === 'open' ? 'open' : 'history'} by address or description…`}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />
