@@ -1,6 +1,6 @@
 # Tab — contracts
 
-`Tab.sol` is a mutual, tamper-proof onchain debt ledger for friends and roommates. A debt only becomes real once both the creditor and the debtor have acknowledged it onchain, and it can only be marked settled once both parties independently confirm. Neither side can unilaterally invent a debt against someone else or erase what they owe.
+`Tab.sol` is an onchain debt ledger for friends and roommates. A creditor logs a debt with `createDebt`; the debtor settles it with `payDebt`, a payable call that forwards the exact amount owed straight to the creditor's wallet and flips the debt to Settled in the same transaction. Settlement is a real, atomic MON transfer — not a status flag either side could fake or dispute.
 
 ## Setup
 

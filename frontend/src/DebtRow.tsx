@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { tabAbi } from './abi';
+import { ConfirmDialog } from './ConfirmDialog';
 import { TAB_CONTRACT_ADDRESS } from './contractAddress';
-import { formatAmount, short } from './format';
+import { formatMon, short } from './format';
 import { useTabWrite } from './useTabWrite';
 
 export type Debt = {
@@ -11,8 +12,6 @@ export type Debt = {
   amount: bigint;
   description: string;
   status: number;
-  creditorConfirmedPaid: boolean;
-  debtorConfirmedPaid: boolean;
 };
 
 const STATUS = ['pending', 'settled'] as const;
@@ -46,43 +45,44 @@ export function DebtRow({
     }
   }, [debt.status]);
 
-  const iConfirmedPaid = iAmDebtor ? debt.debtorConfirmedPaid : debt.creditorConfirmedPaid;
-  const otherConfirmedPaid = iAmDebtor ? debt.creditorConfirmedPaid : debt.debtorConfirmedPaid;
-
-  const call = (functionName: 'settleDebt' | 'deleteDebt') =>
+  const pay = () =>
     writeContract({
       address: TAB_CONTRACT_ADDRESS,
       abi: tabAbi,
-      functionName,
+      functionName: 'payDebt',
+      args: [debt.id],
+      value: debt.amount,
+    });
+
+  const remove = () =>
+    writeContract({
+      address: TAB_CONTRACT_ADDRESS,
+      abi: tabAbi,
+      functionName: 'deleteDebt',
       args: [debt.id],
     });
 
   const label = isPending ? 'Confirm in wallet…' : busy ? 'Sending…' : null;
 
-  const remove = () => {
-    if (window.confirm('Cancel this entry? This is a real transaction and costs a small amount of gas.')) {
-      call('deleteDebt');
-    }
-  };
+  const [confirmingCancel, setConfirmingCancel] = useState(false);
 
   const renderAction = () => {
     if (debt.status !== 0) return null;
 
-    if (iConfirmedPaid) {
-      return <span className="waiting">waiting on {short(counterparty)}</span>;
+    if (iAmDebtor) {
+      return (
+        <button className="stamp-btn" disabled={busy} onClick={pay}>
+          {label ?? `Pay ${formatMon(debt.amount)}`}
+        </button>
+      );
     }
 
     return (
       <>
-        {otherConfirmedPaid && <span className="waiting">waiting on you</span>}
-        <button className="stamp-btn" disabled={busy} onClick={() => call('settleDebt')}>
-          {label ?? (iAmDebtor ? 'I paid this' : 'Payment received')}
+        <span className="waiting">waiting on {short(counterparty)}</span>
+        <button className="stamp-btn void-btn" disabled={busy} onClick={() => setConfirmingCancel(true)}>
+          {label ?? 'Cancel'}
         </button>
-        {!iAmDebtor && !otherConfirmedPaid && (
-          <button className="stamp-btn void-btn" disabled={busy} onClick={remove}>
-            {label ?? 'Cancel'}
-          </button>
-        )}
       </>
     );
   };
@@ -103,7 +103,7 @@ export function DebtRow({
               <span className="pill-owed">owes you</span>
             </>
           )}
-          <span className="debt-amount">{formatAmount(debt.amount)}</span>
+          <span className="debt-amount">{formatMon(debt.amount)}</span>
         </div>
         {debt.description && <div className="debt-desc">{debt.description}</div>}
       </div>
@@ -111,6 +111,18 @@ export function DebtRow({
         <span className={`badge ${statusName}${justStamped ? ' just-stamped' : ''}`}>{statusName}</span>
         {renderAction()}
       </div>
+      {confirmingCancel && (
+        <ConfirmDialog
+          title="Cancel this entry?"
+          body="This is a real transaction and costs a small amount of gas."
+          confirmLabel="Cancel entry"
+          onConfirm={() => {
+            setConfirmingCancel(false);
+            remove();
+          }}
+          onCancel={() => setConfirmingCancel(false)}
+        />
+      )}
     </div>
   );
 }

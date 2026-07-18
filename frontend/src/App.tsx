@@ -69,8 +69,6 @@ function Ledger({ me }: { me: `0x${string}` }) {
           amount: r[2] as bigint,
           description: r[3] as string,
           status: Number(r[4]),
-          creditorConfirmedPaid: r[5] as boolean,
-          debtorConfirmedPaid: r[6] as boolean,
         } satisfies Debt;
       })
       .filter((d): d is Debt => d !== null)

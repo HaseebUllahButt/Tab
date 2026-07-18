@@ -1,6 +1,6 @@
 # Tab
 
-A mutual, tamper-proof debt ledger. A debt only becomes real once the person who owes it agrees. It's only gone once both people say so.
+A mutual debt ledger where settlement is a real payment. When the debtor pays, the MON goes straight to the creditor's wallet in the same transaction that closes the debt out — nobody has to separately vouch that it happened, because the chain already proves it.
 
 ## The problem
 
@@ -11,16 +11,16 @@ Informal debts between friends and roommates ("you owe me for pizza," "I paid th
 Tab is an onchain ledger with exactly two actions:
 
 - Anyone **owed** money can log a debt (`createDebt`) — it starts `Pending`.
-- A debt only flips to `Settled` once **both** the debtor ("I paid this") and the creditor ("Payment received") independently call `settleDebt` — one side's word alone is never enough to erase what's owed, or to falsely claim it was paid.
-- A creditor can cancel a mistaken entry (`deleteDebt`), but only while it's still `Pending` and before either side has confirmed payment.
+- The debtor pays it off (`payDebt`), sending the exact amount owed, in MON, straight to the creditor's wallet through the contract. The debt flips to `Settled` in that same transaction. There's no separate "I confirm I got paid" step, because the creditor really did just get paid, on-chain, and that's not something either side can dispute or fake.
+- A creditor can cancel a mistaken entry (`deleteDebt`), but only while it's still `Pending` — once it's paid, the transfer already happened and the record can't be unilaterally erased.
 
-This mutual-acknowledgment property — a record neither party can rewrite alone — is the one thing a blockchain gives you that a normal database can't. Keeping it to two actions also keeps gas cost to the minimum needed for that guarantee: no wasted transactions.
+Real value moving atomically with the record update — impossible to dispute, impossible to fake — is the one thing a blockchain gives you that a normal database (or a Venmo receipt someone could screenshot-fake) can't.
 
 ## Live deployment
 
 - **Network**: Monad Testnet (chain id `10143`)
-- **Contract**: [`0xfb823c9fa3962a420d095aa1a8d3722b6bd48dc7`](https://testnet.monadexplorer.com/address/0xfb823c9fa3962a420d095aa1a8d3722b6bd48dc7)
-- Every button in the app (record / settle / cancel) sends a real transaction and costs a small amount of MON in gas — nothing in the UI is simulated or hardcoded. On testnet this is free faucet MON with no real value.
+- **Contract**: [`0x7eb3f576b52c6ef1fa7df9c1be809365eab6b67f`](https://testnet.monadexplorer.com/address/0x7eb3f576b52c6ef1fa7df9c1be809365eab6b67f)
+- Every button in the app (record / pay / cancel) sends a real transaction — nothing in the UI is simulated or hardcoded. Paying a debt is a real MON transfer to the creditor, not just a status flag. On testnet this is free faucet MON with no real-world value.
 
 ## Install & run
 
@@ -35,7 +35,7 @@ npm run dev
 
 Opens at **http://localhost:58362** (fixed, uncommon port — chosen so it won't collide with anything else you have running).
 
-In MetaMask, add Monad Testnet if you haven't already (chain id `10143`, RPC `https://testnet-rpc.monad.xyz`, explorer `https://testnet.monadexplorer.com`), fund it from a [Monad testnet faucet](https://testnet.monad.xyz/), connect your wallet on the page, and use two accounts (one as creditor, one as debtor — MetaMask lets you add a second account for free) to see the full create → settle flow.
+In MetaMask, add Monad Testnet if you haven't already (chain id `10143`, RPC `https://testnet-rpc.monad.xyz`, explorer `https://testnet.monadexplorer.com`), fund it from a [Monad testnet faucet](https://testnet.monad.xyz/), connect your wallet on the page, and use two accounts (one as creditor, one as debtor — MetaMask lets you add a second account for free) to see the full create → pay flow. You'll need testnet MON in the debtor account to actually pay a debt off.
 
 ## Wallet support
 
@@ -46,8 +46,8 @@ The app connects via [wagmi's injected connector](frontend/src/wagmi.ts), i.e. w
 This is hackathon code, not an audited product. Before treating it as anything more than a demo:
 
 - **The contract has not been professionally audited.** It's small and covered by 12 Foundry tests (`contracts/test/Tab.t.sol`), but that's test coverage, not a security review.
-- **No money actually moves on-chain.** `amount` is just a number the creditor types in — Tab records that a debt exists and lets both sides attest it was paid, but the actual payment (cash, Venmo, whatever) happens off-chain. The contract can't verify a payment really happened; it can only record that both named parties agreed it did. Don't rely on it as proof outside a context where both parties are honest about the underlying transfer.
-- **Deployed on Monad Testnet.** Testnet MON has no real value — nothing here currently risks real funds. If you deploy your own copy to Mainnet, you're deploying and interacting with it at your own risk, using your own funds.
+- **Real MON moves on-chain.** `payDebt` is `payable` — the debtor must send exactly the amount owed, and the contract forwards it directly to the creditor in the same transaction. This is a genuine, irreversible transfer, not a status flag. There's no escrow and no refund path: if you pay the wrong amount the transaction simply reverts (so funds never leave your wallet on a mismatch), but once a payment succeeds it's final, like any on-chain transfer.
+- **Deployed on Monad Testnet.** Testnet MON has no real-world value — nothing here currently risks real funds. If you deploy your own copy to Mainnet, every `payDebt` call moves real money, at your own risk.
 - **Never share your seed phrase or private key with anyone or anything**, including this app. Tab only ever asks MetaMask to send transactions you approve; it never asks for your seed phrase.
 - The deploy script (`contracts/script/Deploy.s.sol`) expects a throwaway deploy-only private key in a local, gitignored `.env` — never put a wallet holding real funds there.
 

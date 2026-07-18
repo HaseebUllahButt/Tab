@@ -12,8 +12,8 @@ export const tabAbi = [
   },
   {
     type: 'function',
-    name: 'settleDebt',
-    stateMutability: 'nonpayable',
+    name: 'payDebt',
+    stateMutability: 'payable',
     inputs: [{ name: 'id', type: 'uint256' }],
     outputs: [],
   },
@@ -35,8 +35,6 @@ export const tabAbi = [
       { name: 'amount', type: 'uint256' },
       { name: 'description', type: 'string' },
       { name: 'status', type: 'uint8' },
-      { name: 'creditorConfirmedPaid', type: 'bool' },
-      { name: 'debtorConfirmedPaid', type: 'bool' },
     ],
   },
   {
@@ -55,14 +53,6 @@ export const tabAbi = [
       { name: 'debtor', type: 'address', indexed: true },
       { name: 'amount', type: 'uint256', indexed: false },
       { name: 'description', type: 'string', indexed: false },
-    ],
-  },
-  {
-    type: 'event',
-    name: 'PaymentConfirmed',
-    inputs: [
-      { name: 'id', type: 'uint256', indexed: true },
-      { name: 'party', type: 'address', indexed: true },
     ],
   },
   {

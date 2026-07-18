@@ -2,10 +2,11 @@
 pragma solidity ^0.8.24;
 
 /// @title Tab
-/// @notice A mutual, tamper-proof debt ledger. Anyone can log a debt, but it
-///         only flips to Settled once BOTH the creditor and the debtor have
-///         independently confirmed the payment — one side's word alone is
-///         never enough to erase what's owed, or to falsely claim payment.
+/// @notice A mutual debt ledger where settlement is a real, trustless MON
+///         transfer: the debtor pays the creditor directly through the
+///         contract, and that transfer itself is what marks the debt
+///         Settled — there's no separate "I confirm I got paid" step,
+///         because the chain already proves the money moved.
 contract Tab {
     enum Status {
         Pending,
@@ -18,8 +19,6 @@ contract Tab {
         uint256 amount;
         string description;
         uint8 status;
-        bool creditorConfirmedPaid;
-        bool debtorConfirmedPaid;
     }
 
     uint256 private nextId;
@@ -33,7 +32,6 @@ contract Tab {
         uint256 amount,
         string description
     );
-    event PaymentConfirmed(uint256 indexed id, address indexed party);
     event DebtSettled(uint256 indexed id);
     event DebtDeleted(uint256 indexed id, address indexed creditor);
 
@@ -51,9 +49,7 @@ contract Tab {
             debtor: debtor,
             amount: amount,
             description: description,
-            status: uint8(Status.Pending),
-            creditorConfirmedPaid: false,
-            debtorConfirmedPaid: false
+            status: uint8(Status.Pending)
         });
 
         debtsByAddress[msg.sender].push(id);
@@ -62,36 +58,35 @@ contract Tab {
         emit DebtCreated(id, msg.sender, debtor, amount, description);
     }
 
-    /// @notice Confirm the debt has been paid. Requires both the debtor
-    ///         ("I paid this") and the creditor ("I received it") to call
-    ///         this independently before the debt flips to Settled.
-    function settleDebt(uint256 id) external {
+    /// @notice Pay off a debt. Only the debtor can call this, and must send
+    ///         exactly the owed amount in MON — the contract forwards it
+    ///         straight to the creditor in the same transaction. The debt
+    ///         flips to Settled immediately; there's nothing left for the
+    ///         creditor to separately confirm, since they just received the
+    ///         funds on-chain.
+    function payDebt(uint256 id) external payable {
         Debt storage debt = debts[id];
-        require(msg.sender == debt.creditor || msg.sender == debt.debtor, "not a party");
+        require(msg.sender == debt.debtor, "only debtor can pay");
         require(debt.status == uint8(Status.Pending), "already settled");
+        require(msg.value == debt.amount, "must send exact amount owed");
 
-        if (msg.sender == debt.creditor) {
-            debt.creditorConfirmedPaid = true;
-        } else {
-            debt.debtorConfirmedPaid = true;
-        }
-        emit PaymentConfirmed(id, msg.sender);
+        // Effects before interaction: the debt is Settled before the
+        // external transfer, so the creditor can't reenter payDebt (or
+        // anything else) mid-call and observe a still-Pending debt.
+        debt.status = uint8(Status.Settled);
+        emit DebtSettled(id);
 
-        if (debt.creditorConfirmedPaid && debt.debtorConfirmedPaid) {
-            debt.status = uint8(Status.Settled);
-            emit DebtSettled(id);
-        }
+        (bool ok,) = payable(debt.creditor).call{value: msg.value}("");
+        require(ok, "transfer to creditor failed");
     }
 
     /// @notice Cancel a mistaken entry. Only the creditor can do this, and
-    ///         only before either side has confirmed payment — once either
-    ///         party has started confirming, the record can't be unilaterally
-    ///         erased by the creditor.
+    ///         only before it's been paid — once paid, the transfer already
+    ///         happened and the record can't be unilaterally erased.
     function deleteDebt(uint256 id) external {
         Debt storage debt = debts[id];
         require(msg.sender == debt.creditor, "only creditor can delete");
         require(debt.status == uint8(Status.Pending), "can only delete a pending debt");
-        require(!debt.creditorConfirmedPaid && !debt.debtorConfirmedPaid, "payment already confirmed");
 
         address debtor = debt.debtor;
         delete debts[id];
@@ -116,26 +111,10 @@ contract Tab {
     function getDebt(uint256 id)
         external
         view
-        returns (
-            address creditor,
-            address debtor,
-            uint256 amount,
-            string memory description,
-            uint8 status,
-            bool creditorConfirmedPaid,
-            bool debtorConfirmedPaid
-        )
+        returns (address creditor, address debtor, uint256 amount, string memory description, uint8 status)
     {
         Debt storage debt = debts[id];
-        return (
-            debt.creditor,
-            debt.debtor,
-            debt.amount,
-            debt.description,
-            debt.status,
-            debt.creditorConfirmedPaid,
-            debt.debtorConfirmedPaid
-        );
+        return (debt.creditor, debt.debtor, debt.amount, debt.description, debt.status);
     }
 
     function getDebtsFor(address who) external view returns (uint256[] memory) {
