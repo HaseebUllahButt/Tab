@@ -41,6 +41,7 @@ This was built solo, fast, for a hackathon. It's a proof of concept, not a produ
 
 ## Live deployment
 
+- **App**: [frontend-one-amber-90.vercel.app](https://frontend-one-amber-90.vercel.app)
 - **Network**: Monad Testnet (chain id `10143`)
 - **Contract**: [`0x7eb3f576b52c6ef1fa7df9c1be809365eab6b67f`](https://testnet.monadexplorer.com/address/0x7eb3f576b52c6ef1fa7df9c1be809365eab6b67f)
 - Every button here fires a real transaction — nothing in this app is faked or hardcoded for demo purposes. Paying a debt is a genuine MON transfer, not a status flag being flipped behind the scenes.
