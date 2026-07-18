@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { isAddress } from 'viem';
 import { tabAbi } from './abi';
 import { TAB_CONTRACT_ADDRESS } from './contractAddress';
+import { toAmountUnits } from './format';
 import { useTabWrite } from './useTabWrite';
 
 export function NewDebtForm({ me, onCreated }: { me: `0x${string}`; onCreated: () => void }) {
@@ -18,8 +19,9 @@ export function NewDebtForm({ me, onCreated }: { me: `0x${string}`; onCreated: (
 
   const trimmedDebtor = debtor.trim();
   const amountNum = Number(amount);
+  const amountUnits = Number.isFinite(amountNum) ? toAmountUnits(amountNum) : 0n;
   const validDebtor = isAddress(trimmedDebtor) && trimmedDebtor.toLowerCase() !== me.toLowerCase();
-  const valid = validDebtor && Number.isFinite(amountNum) && amountNum > 0;
+  const valid = validDebtor && amountUnits > 0n;
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
@@ -28,7 +30,7 @@ export function NewDebtForm({ me, onCreated }: { me: `0x${string}`; onCreated: (
       address: TAB_CONTRACT_ADDRESS,
       abi: tabAbi,
       functionName: 'createDebt',
-      args: [trimmedDebtor as `0x${string}`, BigInt(Math.trunc(amountNum)), description.trim()],
+      args: [trimmedDebtor as `0x${string}`, amountUnits, description.trim()],
     });
   };
 
@@ -48,8 +50,9 @@ export function NewDebtForm({ me, onCreated }: { me: `0x${string}`; onCreated: (
       />
       <input
         type="number"
-        min="1"
-        placeholder="Amt"
+        min="0.01"
+        step="0.01"
+        placeholder="Amt (e.g. 12.50)"
         value={amount}
         onChange={(e) => setAmount(e.target.value)}
       />

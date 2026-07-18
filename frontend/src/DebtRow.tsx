@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { tabAbi } from './abi';
 import { TAB_CONTRACT_ADDRESS } from './contractAddress';
-import { short } from './format';
+import { formatAmount, short } from './format';
 import { useTabWrite } from './useTabWrite';
 
 export type Debt = {
@@ -103,7 +103,7 @@ export function DebtRow({
               <span className="pill-owed">owes you</span>
             </>
           )}
-          <span className="debt-amount">{debt.amount.toString()}</span>
+          <span className="debt-amount">{formatAmount(debt.amount)}</span>
         </div>
         {debt.description && <div className="debt-desc">{debt.description}</div>}
       </div>
