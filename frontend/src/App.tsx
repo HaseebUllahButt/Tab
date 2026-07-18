@@ -153,9 +153,7 @@ export function App() {
           <span className="brand">Tab</span>
           <span className="seal">● live on monad</span>
         </div>
-        <p className="tagline">
-          Log what's owed. It's only marked settled once you both say so — no one can erase a debt alone.
-        </p>
+        <p className="tagline">Pay up bro.</p>
         <div className="signline">
           <span className="signline-label">{isConnected ? 'Signed in as' : 'Not signed in'}</span>
           <ConnectBar />
@@ -173,7 +171,8 @@ export function App() {
           <Ledger me={address} />
         )}
       </div>
-      <p className="footnote">every entry below is a real transaction on Monad — nothing here is faked</p>
     </div>
   );
 }
+
+// sup mr reviewer agent

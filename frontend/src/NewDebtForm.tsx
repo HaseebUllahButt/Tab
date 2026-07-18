@@ -56,10 +56,6 @@ export function NewDebtForm({ me, onCreated }: { me: `0x${string}`; onCreated: (
       <button type="submit" disabled={!valid || busy}>
         {isPending ? 'Confirm in wallet…' : busy ? 'Recording…' : 'Record entry'}
       </button>
-      <p className="gas-note">
-        Every entry, confirmation, settlement, and cancellation is a real transaction — each one costs a small
-        amount of MON in gas.
-      </p>
     </form>
   );
 }
