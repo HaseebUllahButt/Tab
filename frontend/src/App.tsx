@@ -1,12 +1,25 @@
 import { useMemo, useState } from 'react';
-import { useAccount, useConnect, useDisconnect, useReadContract, useReadContracts } from 'wagmi';
+import { useAccount, useBalance, useConnect, useDisconnect, useReadContract, useReadContracts } from 'wagmi';
 import { tabAbi } from './abi';
 import { TAB_CONTRACT_ADDRESS } from './contractAddress';
-import { short, ZERO } from './format';
+import { formatMon, short, ZERO } from './format';
 import { NewDebtForm } from './NewDebtForm';
 import { DebtRow, type Debt } from './DebtRow';
 
 const tab = { address: TAB_CONTRACT_ADDRESS, abi: tabAbi } as const;
+
+function BalanceMonitor({ address }: { address: `0x${string}` }) {
+  const { data: balance } = useBalance({
+    address,
+    query: { refetchInterval: 6000 },
+  });
+
+  return (
+    <span className="balance mono" title="Live wallet balance, polled every few seconds">
+      {balance ? formatMon(balance.value) : '…'}
+    </span>
+  );
+}
 
 function ConnectBar() {
   const { address, isConnected } = useAccount();
@@ -19,6 +32,7 @@ function ConnectBar() {
       <span className="addr">
         <span className="dot" />
         <span className="mono">{short(address)}</span>
+        <BalanceMonitor address={address} />
         <button className="ghost" onClick={() => disconnect()}>
           Disconnect
         </button>

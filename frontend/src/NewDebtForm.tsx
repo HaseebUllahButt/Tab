@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { isAddress, parseEther } from 'viem';
 import { tabAbi } from './abi';
 import { TAB_CONTRACT_ADDRESS } from './contractAddress';
+import { useToast } from './Toast';
 import { useTabWrite } from './useTabWrite';
 
 function parseMon(input: string): bigint {
@@ -17,12 +18,17 @@ export function NewDebtForm({ me, onCreated }: { me: `0x${string}`; onCreated: (
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
 
-  const { writeContract, busy, isPending } = useTabWrite(() => {
-    setDebtor('');
-    setAmount('');
-    setDescription('');
-    onCreated();
-  });
+  const notify = useToast();
+  const { writeContract, busy, isPending } = useTabWrite(
+    () => {
+      setDebtor('');
+      setAmount('');
+      setDescription('');
+      notify('Entry recorded.');
+      onCreated();
+    },
+    (message) => notify(message, 'error'),
+  );
 
   const trimmedDebtor = debtor.trim();
   const amountWei = parseMon(amount);

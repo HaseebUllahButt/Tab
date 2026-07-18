@@ -3,6 +3,7 @@ import { tabAbi } from './abi';
 import { ConfirmDialog } from './ConfirmDialog';
 import { TAB_CONTRACT_ADDRESS } from './contractAddress';
 import { formatMon, short } from './format';
+import { useToast } from './Toast';
 import { useTabWrite } from './useTabWrite';
 
 export type Debt = {
@@ -27,11 +28,24 @@ export function DebtRow({
   me: `0x${string}`;
   onChanged: () => void;
 }) {
-  const { writeContract, busy, isPending } = useTabWrite(onChanged);
-
+  const notify = useToast();
   const iAmDebtor = debt.debtor.toLowerCase() === me.toLowerCase();
   const counterparty = iAmDebtor ? debt.creditor : debt.debtor;
   const statusName = STATUS[debt.status] ?? 'pending';
+
+  const lastAction = useRef<'pay' | 'delete' | null>(null);
+  const { writeContract, busy, isPending } = useTabWrite(
+    () => {
+      if (lastAction.current === 'pay') {
+        notify(`Paid ${formatMon(debt.amount)} to ${short(debt.creditor)}.`);
+      } else if (lastAction.current === 'delete') {
+        notify('Entry cancelled.');
+      }
+      lastAction.current = null;
+      onChanged();
+    },
+    (message) => notify(message, 'error'),
+  );
 
   // Re-play the ink-stamp animation whenever the status actually changes.
   const lastStatus = useRef(debt.status);
@@ -45,7 +59,8 @@ export function DebtRow({
     }
   }, [debt.status]);
 
-  const pay = () =>
+  const pay = () => {
+    lastAction.current = 'pay';
     writeContract({
       address: TAB_CONTRACT_ADDRESS,
       abi: tabAbi,
@@ -53,14 +68,17 @@ export function DebtRow({
       args: [debt.id],
       value: debt.amount,
     });
+  };
 
-  const remove = () =>
+  const remove = () => {
+    lastAction.current = 'delete';
     writeContract({
       address: TAB_CONTRACT_ADDRESS,
       abi: tabAbi,
       functionName: 'deleteDebt',
       args: [debt.id],
     });
+  };
 
   const label = isPending ? 'Confirm in wallet…' : busy ? 'Sending…' : null;
 

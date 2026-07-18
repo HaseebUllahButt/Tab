@@ -6,6 +6,7 @@ import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client
 import { createSyncStoragePersister } from '@tanstack/query-sync-storage-persister';
 import { config } from './wagmi';
 import { App } from './App';
+import { ToastProvider } from './Toast';
 import './index.css';
 
 const queryClient = new QueryClient({
@@ -29,7 +30,9 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <WagmiProvider config={config}>
       <PersistQueryClientProvider client={queryClient} persistOptions={{ persister }}>
-        <App />
+        <ToastProvider>
+          <App />
+        </ToastProvider>
       </PersistQueryClientProvider>
     </WagmiProvider>
   </React.StrictMode>,
