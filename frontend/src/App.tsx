@@ -149,7 +149,6 @@ export function App() {
       <div className="pad">
         <div className="masthead">
           <span className="brand">Tab</span>
-          <span className="seal">● live on monad</span>
         </div>
         <p className="tagline">Pay up bro.</p>
         <div className="signline">
